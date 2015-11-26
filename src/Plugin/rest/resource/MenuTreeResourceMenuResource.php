@@ -47,26 +47,8 @@ class MenuTreeResourceMenuResource extends ResourceBase {
 
       // Only allow a response if the menu is in config
       if (in_array($menu_name, array_filter(array_values($services_menus)))) {
-        $menu_tree = \Drupal::menuTree();
-        $parameters = new MenuTreeParameters();
-        $parameters->onlyEnabledLinks();
-        $tree = $menu_tree->load($menu_name, $parameters);
-
-        if (!empty($tree)) {
-
-          $manipulators = array(
-            array('callable' => 'menu.default_tree_manipulators:checkAccess'),
-            array('callable' => 'menu.default_tree_manipulators:generateIndexAndSort'),
-          );
-          $tree = $menu_tree->transform($tree, $manipulators);
-          $build = $menu_tree->build($tree);
-          // Clean the menu tree so it's ready for serialisation in a resource response.
-          $items = $this->clean_tree($build['#items']);
-
-          return new ResourceResponse($items);
-        }
-
-        throw new NotFoundHttpException(t('Menu with name @menu_name was not found', array('@menu_name' => $menu_name)));
+        $items = $this->build_menutree_resource_tree($menu_name);
+        return new ResourceResponse($items);
       }
 
       throw new NotFoundHttpException(t('Menu tree @menu_name not allowed.', array('@menu_name' => $menu_name)));
@@ -94,6 +76,33 @@ class MenuTreeResourceMenuResource extends ResourceBase {
         $item['below'] = $this->clean_tree($item['below']);
       }
       $items[$k] = $item;
+    }
+    return $items;
+  }
+
+  /**
+   * Build a menu tree
+   *
+   * @param $items
+   * @return array - menu tree render array
+   */
+  public function build_menutree_resource_tree($menu_name) {
+    $items = array();
+    $menu_tree = \Drupal::menuTree();
+    $parameters = new MenuTreeParameters();
+    $parameters->onlyEnabledLinks();
+    $tree = $menu_tree->load($menu_name, $parameters);
+
+    if (!empty($tree)) {
+
+      $manipulators = array(
+        array('callable' => 'menu.default_tree_manipulators:checkAccess'),
+        array('callable' => 'menu.default_tree_manipulators:generateIndexAndSort'),
+      );
+      $tree = $menu_tree->transform($tree, $manipulators);
+      $build = $menu_tree->build($tree);
+      // Clean the menu tree so it's ready for serialisation in a resource response.
+      $items = $this->clean_tree($build['#items']);
     }
     return $items;
   }
